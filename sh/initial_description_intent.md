@@ -62,7 +62,7 @@ liquidity source that does not support typical
 This instance of `Settler` supports swaps where the submitting address is not
 the taker. This means that we must provide an alternative mechanism for
 authorizing a swap that ensures the signed-over swap is not
-malleable. Settlement of intents is faciliated by the `executeMetaTxn` entry
+malleable. Settlement of intents is facilitated by the `executeMetaTxn` entry
 point and uses the "witness" functionality of `Permit2` to ensure that the
 taker's signature is over the tokens being sent and the tokens being
 received. In contrast to the "metatransaction" flow, the taker *ONLY* signs the
