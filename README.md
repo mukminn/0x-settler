@@ -103,53 +103,7 @@ function computeSettlerAddress(uint128 featureId, uint64 deployNonce)
 
 </details>
 
-```Solidity
-function computeGenuineSettler(uint128 featureId, uint64 deployNonce)
-    internal
-    view
-    returns (address)
-{
-    address zeroExDeployer = 0x00000000000004533Fe15556B1E086BB1A72cEae;
-    bytes32 salt = bytes32(
-        uint256(featureId) << 128 | uint256(block.chainid) << 64
-            | uint256(deployNonce)
-    );
-    // for London hardfork chains, substitute
-    // 0x1774bbdc4a308eaf5967722c7a4708ea7a3097859cb8768a10611448c29981c3
-    bytes32 shimInitHash =
-        0x3bf3f97f0be1e2c00023033eefeb4fc062ac552ff36778b17060d90b6764902f;
-    address shim =
-        address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            zeroExDeployer,
-                            salt,
-                            shimInitHash
-                        )
-                    )
-                )
-            )
-        );
-    address settler =
-        address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(bytes2(0xd694), shim, bytes1(0x01))
-                    )
-                )
-            )
-        );
-    return settler;
-}
-```
-
-</details>
-
-### AllowanceHolder addresses
+### AllowanceHolder Addresses
 
 AllowanceHolder is deployed to the following addresses depending on the most
 advanced EVM hardfork supported on the chain. You can hardcode this address in
