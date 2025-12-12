@@ -47,15 +47,15 @@ abstract contract LfjTmTest is AllowanceHolderPairTest {
     }
 
     function lfjTmZeroForOne() internal pure virtual returns (bool) {
-        return true;
+        return false; // Swapping WMON -> launchpad token (quote -> base)
     }
 
     function fromToken() internal view virtual override returns (IERC20) {
-        return IERC20(0x012Dc9b54623C37aEDb6f1b751c568a9995926a9); // launchpad token
+        return IERC20(0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A); // WMON (more liquid)
     }
 
     function toToken() internal view virtual override returns (IERC20) {
-        return IERC20(0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A); // WMON
+        return IERC20(0x012Dc9b54623C37aEDb6f1b751c568a9995926a9); // launchpad token
     }
 
     function testLfjTm_zeroForOne() public skipIf(address(lfjTmPool()) == address(0)) {

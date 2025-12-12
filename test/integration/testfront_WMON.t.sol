@@ -15,7 +15,7 @@ contract testfrontWMONTest is AllowanceHolderPairTest, LfjTmTest {
     }
 
     function amount() internal pure override returns (uint256) {
-        return 100e18;
+        return 10e18; // Reduced from 100e18 to avoid exceeding circulating supply
     }
 
     function uniswapV3Path() internal pure override returns (bytes memory) {
