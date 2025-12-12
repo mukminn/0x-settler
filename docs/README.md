@@ -20,6 +20,13 @@ Welcome to the 0x Settler documentation! This directory contains comprehensive d
   - Pull request process
   - Good first issues
 
+- **[LIBRARY_USAGE.md](LIBRARY_USAGE.md)** - Library usage examples
+  - UnsafeMath library examples
+  - Ternary library for conditionals
+  - FastLogic library for booleans
+  - 512Math library for large numbers
+  - Best practices and real-world examples
+
 ### Main Documentation
 
 - **[../README.md](../README.md)** - Project overview and main documentation
