@@ -168,7 +168,7 @@ exclusively used by 0x's solvers for the `SettlerIntent` flavor of 0x Settler.
 `CrossChainReceiverFactory` is deployed to
 `0x00000000000000304861c3aDfb80dd5ebeC96325` across all chains. You can hardcode
 this address in your integration. This contract is used to deploy counterfactual
-(submarine) addresses to faciliate swapping and other actions on foreign chains
+(submarine) addresses to facilitate swapping and other actions on foreign chains
 after bridging.
 
 ### Permit2 address
