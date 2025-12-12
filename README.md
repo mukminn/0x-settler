@@ -13,74 +13,69 @@ perform swaps without any passive allowances to the contract.
 
 ## How do I find the most recent deployment?
 
-The 0x Settler deployer/registry contract is deployed at:
-`0x00000000000004533Fe15556B1E086BB1A72cEae`
+The 0x Settler registry contract is deployed at:
+```
+0x00000000000004533Fe15556B1E086BB1A72cEae
+```
 
 This registry is an ERC1967 UUPS upgradeable contract with an ERC721-compatible interface.
 
-To find the latest Settler deployment, call:
+### Querying the Registry
 
-```solidity
-ownerOf(uint256 tokenId)
-```
+To find the latest Settler deployment address, call `ownerOf(uint256 tokenId)`:
 
-Use the `tokenId`:
-- **2** → taker-submitted flow
-- **3** → gasless / meta transaction
-- **4** → intents
-- **5** → bridge settler
+| Token ID | Settler Type |
+|----------|--------------|
+| 2 | Taker-submitted flow |
+| 3 | Gasless / meta transaction |
+| 4 | Intents |
+| 5 | Bridge settler |
 
-A reverting response indicates that `Settler` is paused and you should not interact. Do not hardcode any `Settler` address in your integration. _**ALWAYS**_ query the deployer/registry for the address of the most recent `Settler` contract before building or signing a transaction, metatransaction, or order.
+**Important:**
+- A reverting response indicates that `Settler` is paused — do not interact
+- **Never hardcode** Settler addresses in your integration
+- **Always query** the registry before building or signing transactions
 
-### 0x API dwell time
+### 0x API Dwell Time
 
-There is some lag between the deployment of a new instance of 0x Settler and
-when 0x API begins generating calldata targeting that instance. This allows 0x
-to perform extensive end-to-end testing to ensure zero downtime for
-integrators. During this "dwell" period, a strict comparison between the
-[`.transaction.to`](https://0x.org/docs/api#tag/Swap/operation/swap::permit2::getQuote)
-field of the API response and the result of querying
-`IERC721(0x00000000000004533Fe15556B1E086BB1A72cEae).ownerOf(...)` will
-fail. For this reason, there is a fallback. If `ownerOf` does not revert, but
-the return value isn't the expected value, _**YOU SHOULD ALSO**_ query the
-selector `function prev(uint128) external view returns (address)` with the same
-argument. If the response from this function call does not revert and the result
-is the expected address, then the 0x API is in the dwell time and you may
-proceed as normal.
+There is a brief lag between deploying a new Settler instance and when 0x API begins using it. During this "dwell" period for testing:
+
+1. Query `ownerOf(tokenId)` — this returns the current deployment
+2. If the API response doesn't match, also query `prev(tokenId)` — this returns the previous deployment
+3. If either matches the expected address, you may proceed
+
+This ensures zero downtime during upgrades.
 
 <details>
-<summary>Example Solidity code for checking whether Settler is genuine</summary>
+<summary>Example: Verify Settler Address</summary>
 
-```Solidity
-interface IERC721Tiny {
+```solidity
+interface IDeployer {
     function ownerOf(uint256 tokenId) external view returns (address);
-}
-interface IDeployerTiny is IERC721Tiny {
     function prev(uint128 featureId) external view returns (address);
 }
 
-IDeployerTiny constant ZERO_EX_DEPLOYER =
-    IDeployerTiny(0x00000000000004533Fe15556B1E086BB1A72cEae);
+IDeployer constant REGISTRY = IDeployer(0x00000000000004533Fe15556B1E086BB1A72cEae);
 
-error CounterfeitSettler(address);
+error InvalidSettler(address);
 
-function requireGenuineSettler(uint128 featureId, address allegedSettler)
-    internal
-    view
-{
-    // Any revert in `ownerOf` or `prev` will be bubbled. Any error in
-    // ABIDecoding the result will result in a revert without a reason string.
-    if (ZERO_EX_DEPLOYER.ownerOf(featureId) != allegedSettler
-        && ZERO_EX_DEPLOYER.prev(featureId) != allegedSettler) {
-        revert CounterfeitSettler(allegedSettler);
+function verifySettler(uint128 featureId, address allegedSettler) internal view {
+    address current = REGISTRY.ownerOf(featureId);
+    address previous = REGISTRY.prev(featureId);
+    
+    if (current != allegedSettler && previous != allegedSettler) {
+        revert InvalidSettler(allegedSettler);
     }
 }
 ```
 
-While the above code is the _**strongly recommended**_ approach, it is
-comparatively gas-expensive. A more gas-optimized approach is demonstrated
-below, but it does not cover the case where Settler has been paused due to a
-bug.
+**Note:** The above approach checks both `ownerOf` and `prev` to handle the dwell time period. For gas-optimized alternatives, see the advanced example below.
+</details>
+
+<details>
+<summary>Advanced: Gas-Optimized Address Computation</summary>
+
+**Warning:** This approach does not detect when Settler is paused.
 
 ```Solidity
 function computeGenuineSettler(uint128 featureId, uint64 deployNonce)
