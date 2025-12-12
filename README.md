@@ -3,107 +3,143 @@
 Settlement contracts utilising [Permit2](https://github.com/Uniswap/permit2) to
 perform swaps without any passive allowances to the contract.
 
-## Documentation
-
-- **[docs/TESTING.md](docs/TESTING.md)** - Comprehensive testing guide and best practices
-- **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)** - Contribution guidelines for developers
-- **[docs/README.md](docs/README.md)** - Documentation index
-- **[CLAUDE.md](CLAUDE.md)** - Development guidelines and patterns
-- **[GOOD_FIRST_ISSUES.md](GOOD_FIRST_ISSUES.md)** - Guide for new contributors
-
 ## How do I find the most recent deployment?
 
-The 0x Settler registry contract is deployed at:
-```
-0x00000000000004533Fe15556B1E086BB1A72cEae
-```
+The 0x Settler deployer/registry contract is deployed to
+`0x00000000000004533Fe15556B1E086BB1A72cEae` across all chains (unless somebody
+screwed up the vanity address and didn't update this document). The
+deployer/registry is an ERC1967 UUPS upgradeable contract that implements an
+ERC721-compatible NFT. To find the address of the most recent `Settler`
+deployment, call `function ownerOf(uint256 tokenId) external view returns (address)`
+with the `tokenId` set to the number of the feature that you wish to query. For
+taker-submitted flows, the feature number is probably 2 unless something major
+changed and nobody updated this document. For gasless/metatransaction flows, the
+feature number is probably 3. For intents, the feature number is probably 4. For
+bridge settler, the feature number is probably 5. A reverting response indicates
+that `Settler` is paused and you should not interact. Do not hardcode any `Settler`
+address in your integration. _**ALWAYS**_ query the deployer/registry for the address
+of the most recent `Settler` contract before building or signing a transaction,
+metatransaction, or order.
 
-This registry is an ERC1967 UUPS upgradeable contract with an ERC721-compatible interface.
+### 0x API dwell time
 
-### Querying the Registry
+There is some lag between the deployment of a new instance of 0x Settler and
+when 0x API begins generating calldata targeting that instance. This allows 0x
+to perform extensive end-to-end testing to ensure zero downtime for
+integrators. During this "dwell" period, a strict comparison between the
+[`.transaction.to`](https://0x.org/docs/api#tag/Swap/operation/swap::permit2::getQuote)
+field of the API response and the result of querying
+`IERC721(0x00000000000004533Fe15556B1E086BB1A72cEae).ownerOf(...)` will
+fail. For this reason, there is a fallback. If `ownerOf` does not revert, but
+the return value isn't the expected value, _**YOU SHOULD ALSO**_ query the
+selector `function prev(uint128) external view returns (address)` with the same
+argument. If the response from this function call does not revert and the result
+is the expected address, then the 0x API is in the dwell time and you may
+proceed as normal.
 
-To find the latest Settler deployment address, call `ownerOf(uint256 tokenId)`:
+## Additional Developer Notes
 
-| Token ID | Settler Type |
-|----------|--------------|
-| 2 | Taker-submitted flow |
-| 3 | Gasless / meta transaction |
-| 4 | Intents |
-| 5 | Bridge settler |
+This section improves clarity for new developers by explaining how to correctly reference the latest Settler deployment, avoid hardcoding addresses, and understand how the registry resolves feature-specific implementations.
 
-**Important:**
-- A reverting response indicates that `Settler` is paused — do not interact
-- **Never hardcode** Settler addresses in your integration
-- **Always query** the registry before building or signing transactions
+### Why Use the Registry?
 
-### 0x API Dwell Time
+The Settler registry provides a single source of truth for all Settler deployments across different features. Instead of hardcoding addresses (which can become outdated or incorrect), always query the registry to get the current deployment address.
 
-There is a brief lag between deploying a new Settler instance and when 0x API begins using it. During this "dwell" period for testing:
+### Best Practices
 
-1. Query `ownerOf(tokenId)` — this returns the current deployment
-2. If the API response doesn't match, also query `prev(tokenId)` — this returns the previous deployment
-3. If either matches the expected address, you may proceed
+1. **Always Query Before Use**: Never assume a Settler address remains constant. Always query `ownerOf(tokenId)` before building transactions.
 
-This ensures zero downtime during upgrades.
+2. **Handle Paused State**: If `ownerOf` reverts, the Settler is paused. Do not attempt to interact with it.
+
+3. **Support Dwell Time**: During upgrades, check both `ownerOf` and `prev` to handle the transition period gracefully.
+
+4. **Feature-Specific Queries**: Use the correct token ID for your use case:
+   - Token ID 2: Standard taker-submitted swaps
+   - Token ID 3: Gasless meta-transactions
+   - Token ID 4: Intent-based swaps
+   - Token ID 5: Cross-chain bridge settlements
 
 <details>
-<summary>Example: Verify Settler Address</summary>
+<summary>Example Solidity code for checking whether Settler is genuine</summary>
 
-```solidity
-interface IDeployer {
+```Solidity
+interface IERC721Tiny {
     function ownerOf(uint256 tokenId) external view returns (address);
+}
+interface IDeployerTiny is IERC721Tiny {
     function prev(uint128 featureId) external view returns (address);
 }
 
-IDeployer constant REGISTRY = IDeployer(0x00000000000004533Fe15556B1E086BB1A72cEae);
+IDeployerTiny constant ZERO_EX_DEPLOYER =
+    IDeployerTiny(0x00000000000004533Fe15556B1E086BB1A72cEae);
 
-error InvalidSettler(address);
+error CounterfeitSettler(address);
 
-function verifySettler(uint128 featureId, address allegedSettler) internal view {
-    address current = REGISTRY.ownerOf(featureId);
-    address previous = REGISTRY.prev(featureId);
-    
-    if (current != allegedSettler && previous != allegedSettler) {
-        revert InvalidSettler(allegedSettler);
+function requireGenuineSettler(uint128 featureId, address allegedSettler)
+    internal
+    view
+{
+    // Any revert in `ownerOf` or `prev` will be bubbled. Any error in
+    // ABIDecoding the result will result in a revert without a reason string.
+    if (ZERO_EX_DEPLOYER.ownerOf(featureId) != allegedSettler
+        && ZERO_EX_DEPLOYER.prev(featureId) != allegedSettler) {
+        revert CounterfeitSettler(allegedSettler);
     }
 }
 ```
 
-**Note:** The above approach checks both `ownerOf` and `prev` to handle the dwell time period. For gas-optimized alternatives, see the advanced example below.
-</details>
+While the above code is the _**strongly recommended**_ approach, it is
+comparatively gas-expensive. A more gas-optimized approach is demonstrated
+below, but it does not cover the case where Settler has been paused due to a
+bug.
 
-<details>
-<summary>Advanced: Gas-Optimized Address Computation</summary>
-
-**Warning:** This approach does not detect when Settler is paused.
-
-```solidity
-function computeSettlerAddress(uint128 featureId, uint64 deployNonce)
+```Solidity
+function computeGenuineSettler(uint128 featureId, uint64 deployNonce)
     internal
     view
     returns (address)
 {
-    address deployer = 0x00000000000004533Fe15556B1E086BB1A72cEae;
+    address zeroExDeployer = 0x00000000000004533Fe15556B1E086BB1A72cEae;
     bytes32 salt = bytes32(
-        uint256(featureId) << 128 | uint256(block.chainid) << 64 | uint256(deployNonce)
+        uint256(featureId) << 128 | uint256(block.chainid) << 64
+            | uint256(deployNonce)
     );
-    
-    // For London hardfork chains, use: 0x1774bbdc4a308eaf5967722c7a4708ea7a3097859cb8768a10611448c29981c3
-    bytes32 shimInitHash = 0x3bf3f97f0be1e2c00023033eefeb4fc062ac552ff36778b17060d90b6764902f;
-    
-    address shim = address(uint160(uint256(keccak256(
-        abi.encodePacked(bytes1(0xff), deployer, salt, shimInitHash)
-    ))));
-    
-    return address(uint160(uint256(keccak256(
-        abi.encodePacked(bytes2(0xd694), shim, bytes1(0x01))
-    ))));
+    // for London hardfork chains, substitute
+    // 0x1774bbdc4a308eaf5967722c7a4708ea7a3097859cb8768a10611448c29981c3
+    bytes32 shimInitHash =
+        0x3bf3f97f0be1e2c00023033eefeb4fc062ac552ff36778b17060d90b6764902f;
+    address shim =
+        address(
+            uint160(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            bytes1(0xff),
+                            zeroExDeployer,
+                            salt,
+                            shimInitHash
+                        )
+                    )
+                )
+            )
+        );
+    address settler =
+        address(
+            uint160(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(bytes2(0xd694), shim, bytes1(0x01))
+                    )
+                )
+            )
+        );
+    return settler;
 }
 ```
 
 </details>
 
-### AllowanceHolder Addresses
+### AllowanceHolder addresses
 
 AllowanceHolder is deployed to the following addresses depending on the most
 advanced EVM hardfork supported on the chain. You can hardcode this address in
@@ -132,7 +168,7 @@ exclusively used by 0x's solvers for the `SettlerIntent` flavor of 0x Settler.
 `CrossChainReceiverFactory` is deployed to
 `0x00000000000000304861c3aDfb80dd5ebeC96325` across all chains. You can hardcode
 this address in your integration. This contract is used to deploy counterfactual
-(submarine) addresses to facilitate swapping and other actions on foreign chains
+(submarine) addresses to faciliate swapping and other actions on foreign chains
 after bridging.
 
 ### Permit2 address
@@ -1531,4 +1567,3 @@ deployment you've already done. Tweak `gasMultiplierPercent` and
 `minGasPriceGwei` in `chain_config.json`.
 
 Congratulations, `Settler` is deployed on a new chain! :tada:
-
