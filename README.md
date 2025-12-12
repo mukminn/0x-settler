@@ -77,6 +77,32 @@ function verifySettler(uint128 featureId, address allegedSettler) internal view 
 
 **Warning:** This approach does not detect when Settler is paused.
 
+```solidity
+function computeSettlerAddress(uint128 featureId, uint64 deployNonce)
+    internal
+    view
+    returns (address)
+{
+    address deployer = 0x00000000000004533Fe15556B1E086BB1A72cEae;
+    bytes32 salt = bytes32(
+        uint256(featureId) << 128 | uint256(block.chainid) << 64 | uint256(deployNonce)
+    );
+    
+    // For London hardfork chains, use: 0x1774bbdc4a308eaf5967722c7a4708ea7a3097859cb8768a10611448c29981c3
+    bytes32 shimInitHash = 0x3bf3f97f0be1e2c00023033eefeb4fc062ac552ff36778b17060d90b6764902f;
+    
+    address shim = address(uint160(uint256(keccak256(
+        abi.encodePacked(bytes1(0xff), deployer, salt, shimInitHash)
+    ))));
+    
+    return address(uint160(uint256(keccak256(
+        abi.encodePacked(bytes2(0xd694), shim, bytes1(0x01))
+    ))));
+}
+```
+
+</details>
+
 ```Solidity
 function computeGenuineSettler(uint128 featureId, uint64 deployNonce)
     internal
@@ -1551,3 +1577,4 @@ deployment you've already done. Tweak `gasMultiplierPercent` and
 `minGasPriceGwei` in `chain_config.json`.
 
 Congratulations, `Settler` is deployed on a new chain! :tada:
+
