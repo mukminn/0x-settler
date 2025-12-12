@@ -3,7 +3,6 @@ pragma solidity ^0.8.25;
 
 import {Test} from "@forge-std/Test.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
-import {ERC20} from "@solmate/tokens/ERC20.sol";
 
 import {
     ZeroSellAmount,
@@ -19,12 +18,11 @@ import {Utils} from "../Utils.sol";
 /// @notice Unit tests for edge cases and boundary conditions
 contract EdgeCasesTest is Utils, Test {
     IERC20 internal constant TEST_TOKEN = IERC20(address(0x1234567890123456789012345678901234567890));
-    IERC20 internal constant ZERO_ADDRESS_TOKEN = IERC20(address(0));
 
     /// @notice Test ZeroSellAmount error
     function testZeroSellAmountError() public {
         vm.expectRevert(
-            abi.encodeWithSelector(ZeroSellAmount.selector, TEST_TOKEN)
+            abi.encodeWithSignature("ZeroSellAmount(address)", TEST_TOKEN)
         );
         revert ZeroSellAmount(TEST_TOKEN);
     }
@@ -32,21 +30,23 @@ contract EdgeCasesTest is Utils, Test {
     /// @notice Test ZeroBuyAmount error
     function testZeroBuyAmountError() public {
         vm.expectRevert(
-            abi.encodeWithSelector(ZeroBuyAmount.selector, TEST_TOKEN)
+            abi.encodeWithSignature("ZeroBuyAmount(address)", TEST_TOKEN)
         );
         revert ZeroBuyAmount(TEST_TOKEN);
     }
 
     /// @notice Test ZeroToken error
     function testZeroTokenError() public {
-        vm.expectRevert(ZeroToken.selector);
+        vm.expectRevert(
+            abi.encodeWithSignature("ZeroToken()")
+        );
         revert ZeroToken();
     }
 
     /// @notice Test DeltaNotPositive error
     function testDeltaNotPositiveError() public {
         vm.expectRevert(
-            abi.encodeWithSelector(DeltaNotPositive.selector, TEST_TOKEN)
+            abi.encodeWithSignature("DeltaNotPositive(address)", TEST_TOKEN)
         );
         revert DeltaNotPositive(TEST_TOKEN);
     }
@@ -54,7 +54,7 @@ contract EdgeCasesTest is Utils, Test {
     /// @notice Test DeltaNotNegative error
     function testDeltaNotNegativeError() public {
         vm.expectRevert(
-            abi.encodeWithSelector(DeltaNotNegative.selector, TEST_TOKEN)
+            abi.encodeWithSignature("DeltaNotNegative(address)", TEST_TOKEN)
         );
         revert DeltaNotNegative(TEST_TOKEN);
     }
@@ -63,7 +63,7 @@ contract EdgeCasesTest is Utils, Test {
     function testFuzzZeroSellAmount(address token) public {
         vm.assume(token != address(0));
         vm.expectRevert(
-            abi.encodeWithSelector(ZeroSellAmount.selector, IERC20(token))
+            abi.encodeWithSignature("ZeroSellAmount(address)", IERC20(token))
         );
         revert ZeroSellAmount(IERC20(token));
     }
@@ -72,7 +72,7 @@ contract EdgeCasesTest is Utils, Test {
     function testFuzzZeroBuyAmount(address token) public {
         vm.assume(token != address(0));
         vm.expectRevert(
-            abi.encodeWithSelector(ZeroBuyAmount.selector, IERC20(token))
+            abi.encodeWithSignature("ZeroBuyAmount(address)", IERC20(token))
         );
         revert ZeroBuyAmount(IERC20(token));
     }
@@ -81,7 +81,7 @@ contract EdgeCasesTest is Utils, Test {
     function testFuzzDeltaNotPositive(address token) public {
         vm.assume(token != address(0));
         vm.expectRevert(
-            abi.encodeWithSelector(DeltaNotPositive.selector, IERC20(token))
+            abi.encodeWithSignature("DeltaNotPositive(address)", IERC20(token))
         );
         revert DeltaNotPositive(IERC20(token));
     }
@@ -90,7 +90,7 @@ contract EdgeCasesTest is Utils, Test {
     function testFuzzDeltaNotNegative(address token) public {
         vm.assume(token != address(0));
         vm.expectRevert(
-            abi.encodeWithSelector(DeltaNotNegative.selector, IERC20(token))
+            abi.encodeWithSignature("DeltaNotNegative(address)", IERC20(token))
         );
         revert DeltaNotNegative(IERC20(token));
     }

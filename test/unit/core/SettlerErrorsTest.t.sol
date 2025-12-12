@@ -3,7 +3,6 @@ pragma solidity ^0.8.25;
 
 import {Test} from "@forge-std/Test.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
-import {ERC20} from "@solmate/tokens/ERC20.sol";
 
 import {
     TooMuchSlippage,
@@ -30,8 +29,8 @@ contract SettlerErrorsTest is Utils, Test {
         uint256 actualBuyAmount = 900e18; // Less than expected (slippage)
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                TooMuchSlippage.selector, TEST_TOKEN, expectedBuyAmount, actualBuyAmount
+            abi.encodeWithSignature(
+                "TooMuchSlippage(address,uint256,uint256)", TEST_TOKEN, expectedBuyAmount, actualBuyAmount
             )
         );
 
@@ -44,8 +43,8 @@ contract SettlerErrorsTest is Utils, Test {
         uint256 actualBuyAmount = 100e18;
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                TooMuchSlippage.selector, TEST_TOKEN, expectedBuyAmount, actualBuyAmount
+            abi.encodeWithSignature(
+                "TooMuchSlippage(address,uint256,uint256)", TEST_TOKEN, expectedBuyAmount, actualBuyAmount
             )
         );
 
@@ -58,8 +57,8 @@ contract SettlerErrorsTest is Utils, Test {
         uint256 actualBuyAmount = type(uint256).max - 1;
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                TooMuchSlippage.selector, TEST_TOKEN, expectedBuyAmount, actualBuyAmount
+            abi.encodeWithSignature(
+                "TooMuchSlippage(address,uint256,uint256)", TEST_TOKEN, expectedBuyAmount, actualBuyAmount
             )
         );
 
@@ -73,7 +72,7 @@ contract SettlerErrorsTest is Utils, Test {
         bytes memory data = abi.encode("test data");
 
         vm.expectRevert(
-            abi.encodeWithSelector(ActionInvalid.selector, i, action, data)
+            abi.encodeWithSignature("ActionInvalid(uint256,bytes4,bytes)", i, action, data)
         );
 
         revertActionInvalid(i, uint256(uint32(action)), data);
@@ -86,7 +85,7 @@ contract SettlerErrorsTest is Utils, Test {
         bytes memory data = "";
 
         vm.expectRevert(
-            abi.encodeWithSelector(ActionInvalid.selector, i, action, data)
+            abi.encodeWithSignature("ActionInvalid(uint256,bytes4,bytes)", i, action, data)
         );
 
         revertActionInvalid(i, uint256(uint32(action)), data);
@@ -102,7 +101,7 @@ contract SettlerErrorsTest is Utils, Test {
         }
 
         vm.expectRevert(
-            abi.encodeWithSelector(ActionInvalid.selector, i, action, data)
+            abi.encodeWithSignature("ActionInvalid(uint256,bytes4,bytes)", i, action, data)
         );
 
         revertActionInvalid(i, uint256(uint32(action)), data);
@@ -113,7 +112,7 @@ contract SettlerErrorsTest is Utils, Test {
         uint8 forkId = 255;
 
         vm.expectRevert(
-            abi.encodeWithSelector(UnknownForkId.selector, forkId)
+            abi.encodeWithSignature("UnknownForkId(uint8)", forkId)
         );
 
         revertUnknownForkId(forkId);
@@ -124,7 +123,7 @@ contract SettlerErrorsTest is Utils, Test {
         uint8 forkId = 0;
 
         vm.expectRevert(
-            abi.encodeWithSelector(UnknownForkId.selector, forkId)
+            abi.encodeWithSignature("UnknownForkId(uint8)", forkId)
         );
 
         revertUnknownForkId(forkId);
@@ -133,7 +132,7 @@ contract SettlerErrorsTest is Utils, Test {
     /// @notice Test revertConfusedDeputy function
     function testRevertConfusedDeputy() public {
         vm.expectRevert(
-            abi.encodeWithSelector(ConfusedDeputy.selector)
+            abi.encodeWithSignature("ConfusedDeputy()")
         );
 
         revertConfusedDeputy();
@@ -148,7 +147,7 @@ contract SettlerErrorsTest is Utils, Test {
         vm.assume(expected != actual); // Ensure they're different for meaningful test
 
         vm.expectRevert(
-            abi.encodeWithSelector(TooMuchSlippage.selector, IERC20(token), expected, actual)
+            abi.encodeWithSignature("TooMuchSlippage(address,uint256,uint256)", IERC20(token), expected, actual)
         );
 
         revertTooMuchSlippage(IERC20(token), expected, actual);
@@ -161,7 +160,7 @@ contract SettlerErrorsTest is Utils, Test {
         bytes memory data
     ) public {
         vm.expectRevert(
-            abi.encodeWithSelector(ActionInvalid.selector, i, action, data)
+            abi.encodeWithSignature("ActionInvalid(uint256,bytes4,bytes)", i, action, data)
         );
 
         revertActionInvalid(i, uint256(uint32(action)), data);
@@ -170,7 +169,7 @@ contract SettlerErrorsTest is Utils, Test {
     /// @notice Fuzz test for revertUnknownForkId
     function testFuzzRevertUnknownForkId(uint8 forkId) public {
         vm.expectRevert(
-            abi.encodeWithSelector(UnknownForkId.selector, forkId)
+            abi.encodeWithSignature("UnknownForkId(uint8)", forkId)
         );
 
         revertUnknownForkId(forkId);
