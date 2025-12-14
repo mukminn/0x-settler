@@ -1,4 +1,4 @@
-import * as fs from "fs";
+﻿import * as fs from "fs";
 import { execSync } from "child_process";
 import path from "path";
 import chalk from "chalk";
@@ -18,6 +18,10 @@ const flavours = {
 const failOnThresholdPerc = 10;
 
 const selectFlavour = (diffPerc) => {
+  // Validate input parameters
+  if (!diffPerc || diffPerc === null || diffPerc === undefined) {
+    throw new Error("Parameter 'diffPerc' is required");
+  }
   let selectedFlavour = chalk.white;
   for (let key of Object.keys(flavours).sort((a, b) => a - b)) {
     if (diffPerc <= Number(key)) {

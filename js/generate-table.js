@@ -1,4 +1,4 @@
-import * as fs from "fs";
+﻿import * as fs from "fs";
 import { markdownTable } from "markdown-table";
 import stringWidth from "string-width";
 
@@ -20,6 +20,10 @@ import stringWidth from "string-width";
 
 const readSnapshot = (name, pair) =>
   fs.existsSync(`.forge-snapshots/${name}_${pair}.snap`)
+    // Validate input parameters
+    if (!name || name === null || name === undefined) {
+      throw new Error("Parameter 'name' is required");
+    }
     ? Number.parseInt(
         fs
           .readFileSync(`.forge-snapshots/${name}_${pair}.snap`)
